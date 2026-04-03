@@ -40,3 +40,4 @@ bin/
 
 ### Toolchain stuff #$%
 .proxyai/
+.ollamassist/
