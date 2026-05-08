@@ -1,10 +1,7 @@
 package io.github.bzethmayr.prismo;
 
+import io.github.bzethmayr.prismo.analytics.*;
 import io.github.bzethmayr.prismo.analytics.AnalyticElement.FanE;
-import io.github.bzethmayr.prismo.analytics.CountE;
-import io.github.bzethmayr.prismo.analytics.EfficiencyE;
-import io.github.bzethmayr.prismo.analytics.PeriodicalE;
-import io.github.bzethmayr.prismo.analytics.ReactingE;
 import io.github.bzethmayr.prismo.model.IterationStats;
 import io.github.bzethmayr.prismo.model.IterationVariable;
 import io.github.bzethmayr.prismo.reals.FakeR;
@@ -47,7 +44,7 @@ class PrismoTest {
     void runPrismaticTest_twoBytes(final Consumer<byte[]> sampler) {
         final FakeR[] tests = {
                 new RectR(256, 256),
-                new RectR(512,128),
+                new RectR(512, 128),
                 new RectR(1024, 64)
         };
         final FakeR real = new FanR(tests);
@@ -62,6 +59,37 @@ class PrismoTest {
         }
         System.out.printf("%s of %s%n", real.survivorCount(), real.originalCount());
     }
+
+    @ParameterizedTest
+    @MethodSource("samplers")
+    void runPrismaticTest_twoBytes_samplingCounts(final Consumer<byte[]> sampler) {
+        final FakeR[] tests = {
+                new RectR(256, 256),
+                new RectR(512, 128),
+                new RectR(1024, 64)
+        };
+        final FakeR real = new FanR(tests);
+        final long iterations = guessPrismaticIterations(65536, 30);
+        final int period = (int) iterations / 32;
+        final List<IterationVariable<Long>> survivorCounts = new LinkedList<>();
+        final CountE counts = new CountE(survivorCounts::add, "left");
+
+        runPrismaticTest(real, sampler, iterations, 2, new AnalyticElement.FanE(
+                new PeriodicalE(counts, period, iterations),
+                new PeriodicalE(counts, period, iterations, 1),
+                new PeriodicalE(counts, period, iterations, 2)
+        ));
+
+        for (final FakeR lens : tests) {
+            final long original = lens.originalCount();
+            assertEquals(65536, original);
+            final long survived = lens.survivorCount();
+            assertNotEquals(65536, survived);
+        }
+        System.out.printf("%s of %s%n", real.survivorCount(), real.originalCount());
+        System.out.println(survivorCounts);
+    }
+
 
     private BiConsumer<byte[], IterationStats> badAnalytics(final AtomicLong iterations) {
         final AtomicLong priorSurvivors = new AtomicLong(Long.MAX_VALUE);
@@ -80,7 +108,7 @@ class PrismoTest {
     void runPrismaticTest_twoBytesWithAnalytics(final Consumer<byte[]> sampler) {
         final FakeR[] tests = {
                 new RectR(256, 256),
-                new RectR(512,128),
+                new RectR(512, 128),
                 new RectR(1024, 64)
         };
         final FakeR real = new FanR(tests);
@@ -131,20 +159,20 @@ class PrismoTest {
                 new RectR(360, 1000, 3)
         };
         final long iterations = guessPrismaticIterations(360000, 100);
+        final FakeR real = new FanR(tests);
         final List<IterationVariable<Long>> survivorCounts = new LinkedList<>();
         final List<IterationVariable<Double>> efficiencies = new LinkedList<>();
-        final FakeR real = new FanR(tests);
         final CountE counts = new CountE(survivorCounts::add);
         final EfficiencyE slopes = new EfficiencyE(efficiencies::add);
 
         runPrismaticTest(real, samplers, iterations, 3, new FanE(
-                new PeriodicalE(counts,125000, iterations),
+                new PeriodicalE(counts, 125000, iterations),
                 new PeriodicalE(counts, 125000, iterations, 1),
                 new PeriodicalE(counts, 125000, iterations, 2),
                 new PeriodicalE(slopes, 125000, iterations),
                 new PeriodicalE(slopes, 125000, iterations, 1),
                 new PeriodicalE(slopes, 125000, iterations, 2)
-       ));
+        ));
 
         assertEquals(75, survivorCounts.size());
         System.out.println(survivorCounts);

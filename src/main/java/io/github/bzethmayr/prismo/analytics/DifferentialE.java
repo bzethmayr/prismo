@@ -6,13 +6,24 @@ import io.github.bzethmayr.prismo.model.IterationVariable;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 
-public class DifferentialE implements AnalyticElement {
+public class DifferentialE implements TaggedAnalyticElement {
     private final AtomicLong prior = new AtomicLong();
+    private final String tag;
 
     private final Consumer<IterationVariable<Double>> acceptsDifferential;
 
-    public DifferentialE(final Consumer<IterationVariable<Double>> acceptsDifferential) {
+    public DifferentialE(final Consumer<IterationVariable<Double>> acceptsDifferential, final String tag) {
         this.acceptsDifferential = acceptsDifferential;
+        this.tag = tag;
+    }
+
+    public DifferentialE(final Consumer<IterationVariable<Double>> acceptsDifferential) {
+        this(acceptsDifferential, null);
+    }
+
+    @Override
+    public String tag() {
+        return tag;
     }
 
     public AnalyticElement preSample() {
@@ -26,7 +37,7 @@ public class DifferentialE implements AnalyticElement {
         if (lastSurvivors == 0) {
             lastSurvivors = survivors + 1;
         }
-        acceptsDifferential.accept(stats.withValue((double) survivors / (double) lastSurvivors));
+        acceptsDifferential.accept(stats.withValue((double) survivors / (double) lastSurvivors, tag));
         prior.set(survivors);
     }
 }

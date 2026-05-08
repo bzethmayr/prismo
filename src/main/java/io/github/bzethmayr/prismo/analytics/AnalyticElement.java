@@ -1,6 +1,7 @@
 package io.github.bzethmayr.prismo.analytics;
 
 import io.github.bzethmayr.prismo.model.IterationStats;
+import io.github.bzethmayr.prismo.model.Tagged;
 
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
@@ -8,13 +9,17 @@ import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
+@FunctionalInterface
 public interface AnalyticElement extends BiConsumer<byte[], IterationStats> {
-
-    record FanE(AnalyticElement... elements) implements AnalyticElement {
+    record FanE(String tag, AnalyticElement... elements) implements TaggedAnalyticElement {
         public FanE {
             if (elements == null || elements.length == 0) {
                 throw new IllegalArgumentException("Provide some elements");
             }
+        }
+
+        public FanE(AnalyticElement... elements) {
+            this(null, elements);
         }
 
         @Override

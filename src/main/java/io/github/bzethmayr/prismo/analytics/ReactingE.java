@@ -4,14 +4,25 @@ import io.github.bzethmayr.prismo.model.IterationStats;
 
 import java.util.concurrent.atomic.AtomicLong;
 
-public final class ReactingE implements AnalyticElement {
+public final class ReactingE implements TaggedAnalyticElement {
     private final AnalyticElement action;
     private final AtomicLong lastKnown = new AtomicLong(Long.MIN_VALUE);
     private final int delta;
+    private final String tag;
 
-    public ReactingE(final AnalyticElement action, final int delta) {
+    public ReactingE(final AnalyticElement action, final int delta, final String tag) {
         this.action = action;
         this.delta = delta;
+        this.tag = tag;
+    }
+
+    public ReactingE(final AnalyticElement action, final int delta) {
+        this(action, delta, null);
+    }
+
+    @Override
+    public String tag() {
+        return tag;
     }
 
     @Override

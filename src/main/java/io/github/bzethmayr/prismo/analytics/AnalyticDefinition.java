@@ -1,6 +1,7 @@
 package io.github.bzethmayr.prismo.analytics;
 
 import io.github.bzethmayr.prismo.model.IterationVariable;
+import io.github.bzethmayr.prismo.model.Tagged;
 
 import java.util.*;
 import java.util.function.Consumer;
@@ -12,33 +13,64 @@ import java.util.function.Consumer;
  * maps the string name to a factory that knows how to build the concrete element.
  * The registry is a singleton that is populated during class initialisation.
  */
-public final class AnalyticDefinition {
+public record AnalyticDefinition(String type, Map<String, Object> params, List<AnalyticDefinition> children, String tag) implements Tagged {
     /**
      * Registry entry – holds the factory and the list of child names (if any).
      */
     private static final Map<String, ElementFactory> ELEMENT_REGISTRY = new HashMap<>();
+
+    private static String resolveParamString(final Map<String, Object> params, final String name) {
+        return (String) params.get(name);
+    }
+
+    private static long resolveParamLong(final Map<String, Object> params, final String name) {
+        final Object value = params.get(name);
+        if (value != null) {
+            return (long) value;
+        }
+        return 0;
+    }
+
+    private static int resolveParamInt(final Map<String, Object> params, final String name) {
+        final Object value = params.get(name);
+        if (value != null) {
+            return (int) value;
+        }
+        return 0;
+    }
+
+    private static TaggedAnalyticElement sameOneOrFan(
+            final List<AnalyticDefinition> children, final CollectorSource collectors, final String tag
+    ) {
+        if (children.size() == 1) {
+            return children.getFirst().build(collectors);
+        }
+        return new AnalyticElement.FanE(tag, children.stream()
+                .map(d -> d.build(collectors))
+                .toArray(AnalyticElement[]::new));
+    }
+
     static {
         // Primitive analytics – no children
-        elementDefinition("count", element((children, params, collectors) ->
-                new CountE(iv -> {})));
-        elementDefinition("efficiency", element((children, params, collectors) ->
-                new EfficiencyE(iv -> {})));
-        elementDefinition("differential", element((children, params, collectors) ->
-                new DifferentialE(iv -> {})));
+        elementDefinition("count", element((children, params, collectors, tag) ->
+                new CountE(collectors.longCollector(resolveParamString(params, "to")), tag)));
+        elementDefinition("efficiency", element((children, params, collectors, tag) ->
+                new EfficiencyE(collectors.doubleCollector((String) params.get("to")), tag)));
+        elementDefinition("differential", element((children, params, collectors, tag) ->
+                new DifferentialE(collectors.doubleCollector((String) params.get("to")), tag)));
 
         // Composite analytics – children are specified by name
-        elementDefinition("reacting", element((children, params, collectors) ->
+        elementDefinition("reacting", element((children, params, collectors, tag) ->
                 new ReactingE(children.getFirst().build(collectors),
-                        (int) params.get("delta")))); // , List.of("action", "delta")
-        elementDefinition("periodical", element((children, params, collectors) ->
+                        resolveParamInt(params, "delta"), tag))); // , List.of("action", "delta")
+        elementDefinition("periodic", element((children, params, collectors, tag) ->
                 new PeriodicalE(children.getFirst().build(collectors),
-                        (int) params.get("period"),
-                        (long) params.get("iterations"),
-                        (long) params.get("offset")))); // , List.of("action", "period", "iterations", "offset")
-        elementDefinition("fan", element((children, params, collectors) ->
-                new AnalyticElement.FanE(children.stream()
-                        .map(d -> d.build(collectors))
-                        .toArray(AnalyticElement[]::new)))); //, List.of("elements")
+                        resolveParamInt(params, "period"),
+                        resolveParamLong(params, "iterations"),
+                        resolveParamLong(params, "offset"),
+                        tag))); // , List.of("action", "period", "iterations", "offset")
+        elementDefinition("fan", element((children, params, collectors, tag) ->
+                sameOneOrFan(children, collectors, tag))); //, List.of("elements")
     }
 
     static ElementFactory element(final ElementFactory elementFactory) {
@@ -49,8 +81,9 @@ public final class AnalyticDefinition {
         ELEMENT_REGISTRY.put(type, elementFactory);
     }
 
-    interface CollectorSource {
+    public interface CollectorSource {
         Consumer<IterationVariable<Long>> longCollector(final String name);
+
         Consumer<IterationVariable<Double>> doubleCollector(final String name);
     }
 
@@ -60,41 +93,48 @@ public final class AnalyticDefinition {
      */
     @FunctionalInterface
     interface ElementFactory {
-        AnalyticElement build(
+        TaggedAnalyticElement build(
                 List<AnalyticDefinition> children,
                 Map<String, Object> params,
-                CollectorSource collectors
+                CollectorSource collectors,
+                String tag
         );
     }
 
-    private final String type;
-    private final Map<String, Object> params;
-    private final List<AnalyticDefinition> children;
-
-    public AnalyticDefinition(String type, Map<String, Object> params, List<AnalyticDefinition> children) {
+    public AnalyticDefinition(String type, Map<String, Object> params, List<AnalyticDefinition> children, String tag) {
         this.type = Objects.requireNonNull(type);
         this.params = params == null ? Collections.emptyMap() : new HashMap<>(params);
         this.children = children == null ? Collections.emptyList() : new ArrayList<>(children);
+        this.tag = tag;
+    }
+
+    public AnalyticDefinition(String type, Map<String, Object> params, List<AnalyticDefinition> children) {
+        this(type, params, children, null);
     }
 
     /* --------------------------------------------------------------------- */
     /*  Build the concrete element from this definition                        */
     /* --------------------------------------------------------------------- */
 
-    public AnalyticElement build(final CollectorSource collectors) {
+    public TaggedAnalyticElement build(final CollectorSource collectors) {
         ElementFactory factory = ELEMENT_REGISTRY.get(type);
         if (factory == null) {
             throw new IllegalStateException("Unknown analytic type: " + type);
         }
-        return factory.build(children, params, collectors);
+        return factory.build(children, params, collectors, tag);
     }
 
     /* --------------------------------------------------------------------- */
     /*  Getters – useful for introspection or for a parser that builds the
      *  definition from a string/YAML representation.                           */
     /* --------------------------------------------------------------------- */
+    @Override
+    public Map<String, Object> params() {
+        return Collections.unmodifiableMap(params);
+    }
 
-    public String getType() { return type; }
-    public Map<String, Object> getParams() { return Collections.unmodifiableMap(params); }
-    public List<AnalyticDefinition> getChildren() { return Collections.unmodifiableList(children); }
+    @Override
+    public List<AnalyticDefinition> children() {
+        return Collections.unmodifiableList(children);
+    }
 }

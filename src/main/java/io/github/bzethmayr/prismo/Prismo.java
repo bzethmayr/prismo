@@ -49,6 +49,11 @@ public class Prismo {
         }
 
         @Override
+        public String tag() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
         public long iteration() {
             return iteration;
         }
