@@ -9,8 +9,8 @@ For finite binary prefixes of real numbers, this is not the case.
 
 The overall goal here is to use the patterns, if any, of surviving elements in a simulated real domain,
 to determine any signature regularities or weaknesses in random number generators.
-The immediate goal is to construct an analytics pipeline that can distinguish between Random and SecureRandom.
-The punt goal is to construct a RAND16 clone and tell the difference between Random and that.
+The ultimate goal is to construct an analytics pipeline that can distinguish between Random and SecureRandom.
+So far, we can see very clearly that RANDU and other naive (or worse) LCGs cannot cover the domain.
 
 ## FakeR
 

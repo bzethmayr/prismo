@@ -5,7 +5,8 @@ import java.util.BitSet;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
+
+import static net.zethmayr.fungu.core.ExceptionFactory.becauseIllegal;
 
 public final class RectR implements FakeR {
     private final int width;
@@ -15,15 +16,17 @@ public final class RectR implements FakeR {
     private final int sampleSize;
     private final int xBits;
     private final int yBits;
-    private final int xBytes;
-    private final int yBytes;
 
-    private static int needBits(final int length) {
-        return 32 - Integer.numberOfLeadingZeros(length - 1);
+    static int needBits(final int length) {
+        return length == 0
+                ? 1
+                : 32 - Integer.numberOfLeadingZeros(length);
     }
 
-    private static int needBytes(final int needBits) {
-        return (needBits + 7) >>> 3; // ceil(required / 8)
+    static int needBytes(final int needBits) {
+        return needBits == 0
+                ? 1
+                : (needBits + 7) >>> 3; // ceil(required / 8)
     }
 
     public RectR(int width, int height) {
@@ -34,13 +37,11 @@ public final class RectR implements FakeR {
         if (width <= 0 || height <= 0) {
             throw new IllegalArgumentException("Positive dimensions required");
         }
-        xBits = needBits(width);
-        yBits = needBits(height);
+        xBits = needBits(width - 1);
+        yBits = needBits(height - 1);
         if (xBits + yBits > 32) {
             throw new IllegalArgumentException("Non-overlapping dimensions required");
         }
-        xBytes = needBytes(xBits);
-        yBytes = needBytes(yBits);
         this.width = width;
         this.height = height;
         this.originalCount = (long) width * height;
@@ -70,7 +71,7 @@ public final class RectR implements FakeR {
         return originalCount - removed.cardinality();
     }
 
-    private int[] collectSurvivors() {
+    int[] collectSurvivors() {
         final ArrayList<Integer> survivors = new ArrayList<>();
         int survived = -1;
         while ((survived = removed.nextClearBit(survived + 1)) < originalCount) {
@@ -79,181 +80,83 @@ public final class RectR implements FakeR {
         return survivors.stream().mapToInt(n -> n).toArray();
     }
 
-    static int[] computeRawXs(int x, int width, int xMask) {
-        int maxN = (xMask - x) / width;
-        int[] out = new int[maxN + 1];
-        for (int n = 0; n <= maxN; n++) {
-            out[n] = x + n * width;
-        }
-        return out;
-    }
-
-    static int[] computeRawYs(int y, int height, int yMask) {
-        int maxN = (yMask - y) / height;
-        int[] out = new int[maxN + 1];
-        for (int n = 0; n <= maxN; n++) {
-            out[n] = y + n * height;
-        }
-        return out;
-    }
-
     @Override
     public Iterable<byte[]> survivors() {
-        if (xBits + yBits <= 8) {
-            return () -> {
-                final int[] survivors = collectSurvivors();
-                final int survivorCount = survivors.length;
-                final AtomicInteger survivor = new AtomicInteger();
+        final AtomicInteger index = new AtomicInteger();
+        final int[] survivors = collectSurvivors();
+        return () -> new Iterator<>() {
+            @Override
+            public boolean hasNext() {
+                return index.get() < survivors.length;
+            }
 
-                return new Iterator<>() {
-                    @Override
-                    public boolean hasNext() {
-                        return survivor.get() < survivorCount;
-                    }
-
-                    @Override
-                    public byte[] next() {
-                        if (!hasNext()) {
-                            throw new NoSuchElementException();
-                        }
-                        final int index = survivors[survivor.getAndIncrement()];
-                        final int x = index % width;
-                        final int y = index / width;
-                        final int raw = (y << yBits) | x;
-                        return new byte[]{(byte) raw};
-                    }
-                };
-            };
-        }
-        final int middleBytes = sampleSize - (xBytes + yBytes);
-        final int midMax = 1 << (8 * middleBytes);
-        int xMask = (1 << xBits) - 1;
-        int yMask = (1 << yBits) - 1;
-        return () -> {
-            // BitSet removed
-            // int sampleSize
-            final int[] survivors = collectSurvivors();
-            final int survivorCount = survivors.length;
-            final AtomicInteger survivor = new AtomicInteger();
-            final AtomicInteger rawX = new AtomicInteger();
-            final AtomicInteger rawY = new AtomicInteger();
-            final AtomicInteger freeMiddle = new AtomicInteger();
-            final AtomicReference<int[]> rawXs = new AtomicReference<>();
-            final AtomicReference<int[]> rawYs = new AtomicReference<>();
-
-            return new Iterator<>() {
-                @Override
-                public boolean hasNext() {
-                    return freeMiddle.get() < midMax &&
-                            survivor.get() < survivorCount;
-                }
-
-                @Override
-                public byte[] next() {
-                    if (!hasNext()) {
-                        throw new NoSuchElementException();
-                    }
-                    // Initialize rawXs/rawYs lazily
-                    if (rawXs.get() == null) {
-                        int idx = survivors[survivor.get()];
-                        int x = idx % width;
-                        int y = idx / width;
-
-                        rawXs.set(computeRawXs(x, width, xMask));
-                        rawYs.set(computeRawYs(y, height, yMask));
-
-                        rawX.set(0);
-                        rawY.set(0);
-                    }
-                    byte[] out = new byte[sampleSize];
-
-                    // Fill Y bytes
-                    int rawYVal = rawYs.get()[rawY.get()];
-                    for (int i = yBytes - 1; i >= 0; i--) {
-                        out[i] = (byte)(rawYVal & 0xFF);
-                        rawYVal >>>= 8;
-                    }
-
-                    // Fill X bytes
-                    int rawXVal = rawXs.get()[rawX.get()];
-                    int ptr = sampleSize - 1;
-                    for (int i = 0; i < xBytes; i++) {
-                        out[ptr--] = (byte)(rawXVal & 0xFF);
-                        rawXVal >>>= 8;
-                    }
-
-                    // Fill middle bytes
-                    int m = freeMiddle.get();
-                    for (int i = ptr; i >= yBytes; i--) {
-                        out[i] = (byte)(m & 0xFF);
-                        m >>>= 8;
-                    }
-
-                    // Advance counters in semantic-first order
-                    if (rawX.incrementAndGet() < rawXs.get().length) return out;
-
-                    rawX.set(0);
-                    if (rawY.incrementAndGet() < rawYs.get().length) return out;
-
-                    rawY.set(0);
-                    rawXs.set(null); // force re-init for next survivor
-                    survivor.incrementAndGet();
-
-                    if (survivor.get() < survivorCount) return out;
-
-                    // All survivors done → advance middle
-                    survivor.set(0);
-                    freeMiddle.incrementAndGet();
-
-                    return out;
-                }
-            };
+            @Override
+            public byte[] next() {
+                if (!hasNext()) throw new NoSuchElementException();
+                final int survivor = survivors[index.getAndIncrement()];
+                return sampleFor(survivor);
+            }
         };
     }
 
-    private int indexOf(byte[] bytes) {
-        // Interpret bytes as two integers (x,y)
-        // Then fold into a rectangle index
-        int x = extractX(bytes);
-        int y = extractY(bytes);
-        return y * width + x;
+    // --- Fully correct reversible geometry ---
+    int checkIndex(int index) {
+        if (index < 0 || index > originalCount) {
+            throw becauseIllegal("Invalid index %s", index);
+        }
+        return index;
     }
 
-    private int extractX(byte[] bytes) {
-        int ptr = bytes.length;
-        int x = 0;
-
-        // Pull bytes from the end
-        for (int i = 0; i < xBytes; i++) {
-            x = (x << 8) | (bytes[--ptr] & 0xFF);
+    long flattenSample(final byte[] bytes) {
+        long v = 0;
+        for (int i = 0; i < sampleSize; i++) {
+            v |= ((long) bytes[i] & 0xFF) << (8 * i);
         }
-        // Mask off only the required bits
-        if (xBits < 32) {
-            x &= (1 << xBits) - 1;
-        }
-
-        // Final mapping into the geometry
-        return x % width;
+        return v;
     }
 
-    private int extractY(byte[] bytes) {
-        final int needBits = needBits(height);
-        final int needBytes = needBytes(needBits);
+    int indexOf(byte[] bytes) {
+        // Interpret the sample as a single little-endian integer
+        long v = flattenSample(bytes);
 
-        int ptr = 0;
-        int y = 0;
+        // Extract X and Y from bitfield
+        int x = extractX(v);
+        int y = extractY(v);
 
-        // Pull bytes from the beginning
-        for (int i = 0; i < needBytes; i++) {
-            y = (y << 8) | (bytes[ptr++] & 0xFF);
+        // Map into rectangle
+        return checkIndex(y * width + x);
+    }
+
+    byte[] sampleFor(final int index) {
+        // Compute x and y
+        int x = index % width;
+        int y = index / width;
+
+        // Pack into bitfield
+        long v = ((long) y << xBits) | (long) x;
+
+        // Emit little-endian sample
+        byte[] out = new byte[sampleSize];
+        for (int i = 0; i < sampleSize; i++) {
+            out[i] = (byte) (v >>> (8 * i));
         }
-        // Mask excess
-        if (needBits < 32) {
-            y >>>= (8 * needBytes - yBits);
-            y &= (1 << yBits) - 1;
-        }
+        return out;
+    }
 
-        return y % height;
+    int extractX(long flat) {
+        return (int) (flat & ((1L << xBits) - 1)) % width;
+    }
+
+    int extractX(byte[] bytes) {
+        return extractX(flattenSample(bytes));
+    }
+
+    int extractY(long flat) {
+        return (int) ((flat >>> xBits) & ((1L << yBits) - 1)) % height;
+    }
+
+    int extractY(byte[] bytes) {
+        return extractY(flattenSample(bytes));
     }
 }
 

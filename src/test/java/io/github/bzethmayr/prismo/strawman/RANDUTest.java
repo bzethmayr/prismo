@@ -6,6 +6,7 @@ import io.github.bzethmayr.prismo.analytics.EfficiencyE;
 import io.github.bzethmayr.prismo.analytics.PeriodicalE;
 import io.github.bzethmayr.prismo.model.IterationVariable;
 import io.github.bzethmayr.prismo.reals.FakeR;
+import io.github.bzethmayr.prismo.reals.FanR;
 import io.github.bzethmayr.prismo.reals.RectR;
 import org.junit.jupiter.api.RepeatedTest;
 
@@ -24,11 +25,11 @@ class RANDUTest {
     void randu_isTerrible() {
         final RANDU strawman = new RANDU(TEST_RANDOM.nextInt(1, Integer.MAX_VALUE));
         final FakeR[] tests = {
-                new RectR(128, 256),
-                new RectR(256, 128),
-                new RectR(512, 64)
+                new RectR(128, 256, 2),
+                new RectR(256, 128, 2),
+                new RectR(512, 64, 2)
         };
-        final FakeR real = new FakeR.FanR(tests);
+        final FakeR real = new FanR(tests);
         final List<IterationVariable<Long>> survivorCounts = new LinkedList<>();
         final List<IterationVariable<Double>> efficiencies = new LinkedList<>();
         final CountE counts = new CountE(survivorCounts::add, "left");
