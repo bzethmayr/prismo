@@ -33,6 +33,9 @@ public final class ReactingE implements TaggedAnalyticElement {
             last = surviving + 1;
             lastKnown.set(last);
         }
+        if (surviving > last) {
+            throw new IllegalStateException();
+        }
         if (last - surviving >= delta) {
             lastKnown.set(surviving);
             action.accept(bytes, iterationStats);

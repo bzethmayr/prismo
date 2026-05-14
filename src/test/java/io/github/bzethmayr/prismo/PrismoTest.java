@@ -5,8 +5,8 @@ import io.github.bzethmayr.prismo.analytics.AnalyticElement.FanE;
 import io.github.bzethmayr.prismo.model.IterationStats;
 import io.github.bzethmayr.prismo.model.IterationVariable;
 import io.github.bzethmayr.prismo.reals.FakeR;
-import io.github.bzethmayr.prismo.reals.FakeR.FanR;
-import io.github.bzethmayr.prismo.reals.FakeR.MismatchR;
+import io.github.bzethmayr.prismo.reals.FanR;
+import io.github.bzethmayr.prismo.reals.MismatchR;
 import io.github.bzethmayr.prismo.reals.RectR;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -25,6 +25,8 @@ import java.util.stream.Stream;
 import static io.github.bzethmayr.prismo.Prismo.guessPrismaticIterations;
 import static io.github.bzethmayr.prismo.Prismo.runPrismaticTest;
 import static java.math.RoundingMode.HALF_EVEN;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.*;
 
 class PrismoTest {
@@ -43,9 +45,9 @@ class PrismoTest {
     @MethodSource("samplers")
     void runPrismaticTest_twoBytes(final Consumer<byte[]> sampler) {
         final FakeR[] tests = {
-                new RectR(256, 256),
-                new RectR(512, 128),
-                new RectR(1024, 64)
+                new RectR(256, 256, 2),
+                new RectR(512, 128, 2),
+                new RectR(1024, 64, 2)
         };
         final FakeR real = new FanR(tests);
 
@@ -64,9 +66,9 @@ class PrismoTest {
     @MethodSource("samplers")
     void runPrismaticTest_twoBytes_samplingCounts(final Consumer<byte[]> sampler) {
         final FakeR[] tests = {
-                new RectR(256, 256),
-                new RectR(512, 128),
-                new RectR(1024, 64)
+                new RectR(256, 256, 2),
+                new RectR(512, 128, 2),
+                new RectR(1024, 64, 2)
         };
         final FakeR real = new FanR(tests);
         final long iterations = guessPrismaticIterations(65536, 30);
@@ -107,9 +109,9 @@ class PrismoTest {
     @MethodSource("samplers")
     void runPrismaticTest_twoBytesWithAnalytics(final Consumer<byte[]> sampler) {
         final FakeR[] tests = {
-                new RectR(256, 256),
-                new RectR(512, 128),
-                new RectR(1024, 64)
+                new RectR(256, 256, 2),
+                new RectR(512, 128, 2),
+                new RectR(1024, 64, 2)
         };
         final FakeR real = new FanR(tests);
         final AtomicLong iterations = new AtomicLong();
@@ -133,9 +135,9 @@ class PrismoTest {
     @MethodSource("samplers")
     void runPrismaticTest_twoBytesMultipleGeometries(final Consumer<byte[]> sampler) {
         final FakeR[] tests = new FakeR[]{
-                new RectR(256, 256),
-                new MismatchR(65536, new RectR(257, 255)),
-                new MismatchR(65536, new RectR(258, 253))
+                new RectR(256, 256, 2),
+                new MismatchR(65536, new RectR(257, 255, 2)),
+                new MismatchR(65536, new RectR(258, 253, 2))
         };
         final FakeR real = new FanR(tests);
 
@@ -193,13 +195,17 @@ class PrismoTest {
         final List<IterationVariable<Double>> efficiencies = new LinkedList<>();
         final FakeR real = new FanR(tests);
         final EfficiencyE slopes = new EfficiencyE(efficiencies::add);
+        final List<IterationVariable<Long>> counts = new LinkedList<>();
+        final CountE counter = new CountE(counts::add);
 
-        runPrismaticTest(real, samplers, iterations, 3, new FanE(
-                new ReactingE(slopes, 3600)
-        ));
+        runPrismaticTest(real, samplers, iterations, 3,
+                new ReactingE(new FanE(counter, slopes), 3600));
+        System.out.println(counts);
+        System.out.println(efficiencies.stream()
+                .map(d -> d.withValue(BigDecimal.valueOf(d.value()).setScale(4, HALF_EVEN)))
+                .toList());
 
-        assertTrue(efficiencies.size() <= 100);
-        System.out.println(efficiencies.stream().map(d -> d.withValue(BigDecimal.valueOf(d.value()).setScale(7, HALF_EVEN))).toList());
+        assertThat(efficiencies, hasSize(99)); // there are some left
         assertTrue(real.survivorCount() < real.originalCount());
     }
 }
