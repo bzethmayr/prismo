@@ -33,7 +33,7 @@ class TerribleLCGTest implements TestsWithRectR {
                 new RectR(CHAR_WIDE, CHAR_THIN, 2),
                 new RectR(CHAR_THIN, CHAR_WIDE, 2)
         };
-        final FakeR real = new FanR(Long::max, tests);
+        final FakeR real = new FanR(FanR.Reduction.UNION, tests);
         final List<IterationVariable<Long>> survivorCounts = new LinkedList<>();
         final List<IterationVariable<Double>> efficiencies = new LinkedList<>();
         final CountE counts = new CountE(survivorCounts::add, "left");
