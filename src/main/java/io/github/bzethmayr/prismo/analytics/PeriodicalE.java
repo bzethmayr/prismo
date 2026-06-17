@@ -2,20 +2,20 @@ package io.github.bzethmayr.prismo.analytics;
 
 import io.github.bzethmayr.prismo.model.IterationStats;
 
-public record PeriodicalE(AnalyticElement action, int period, long iterations, long offset, String tag) implements TaggedAnalyticElement {
+public record PeriodicalE(String tag, AnalyticElement action, int period, long iterations, long offset) implements TaggedAnalyticElement {
     public PeriodicalE(final AnalyticElement action, final int period, final long iterations) {
         this(action, period, iterations, null);
     }
 
     public PeriodicalE(final AnalyticElement action, final int period, final long iterations, final long offset) {
-        this(action, period, iterations, offset, null);
+        this(null, action, period, iterations, offset);
     }
 
     public PeriodicalE(final AnalyticElement action, final int period, final long iterations, String tag) {
-        this(action, period, iterations, 0L, tag);
+        this(tag, action, period, iterations, 0L);
     }
 
-    public PeriodicalE(final AnalyticElement action, final int period, final long iterations, final long offset, String tag) {
+    public PeriodicalE(String tag, final AnalyticElement action, final int period, final long iterations, final long offset) {
         this.action = action;
         this.iterations = iterations;
         this.period = Math.toIntExact(period % iterations);

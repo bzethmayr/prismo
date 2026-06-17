@@ -9,13 +9,13 @@ public class EfficiencyE implements TaggedAnalyticElement {
     private final Consumer<IterationVariable<Double>> acceptsEfficiency;
     private final String tag;
 
-    public EfficiencyE(final Consumer<IterationVariable<Double>> acceptsEfficiency, final String tag) {
+    public EfficiencyE(final String tag, final Consumer<IterationVariable<Double>> acceptsEfficiency) {
         this.acceptsEfficiency = acceptsEfficiency;
         this.tag = tag;
     }
 
     public EfficiencyE(final Consumer<IterationVariable<Double>> acceptsEfficiency) {
-        this(acceptsEfficiency, null);
+        this(null, acceptsEfficiency);
     }
 
     @Override

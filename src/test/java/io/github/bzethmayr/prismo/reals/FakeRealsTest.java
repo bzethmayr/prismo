@@ -10,7 +10,7 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class FakeRTest implements TestsWithRectR {
+class FakeRealsTest implements TestsWithRectR {
 
     @Test
     void intersectionSurvivors_elementsPresentInAllBases() {

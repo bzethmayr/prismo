@@ -9,13 +9,13 @@ public class CountE implements TaggedAnalyticElement {
     private final String tag;
     private final Consumer<IterationVariable<Long>> acceptsCounts;
 
-    public CountE(final Consumer<IterationVariable<Long>> acceptsCounts, final String tag) {
+    public CountE(final String tag, final Consumer<IterationVariable<Long>> acceptsCounts) {
         this.tag = tag;
         this.acceptsCounts = acceptsCounts;
     }
 
     public CountE(final Consumer<IterationVariable<Long>> acceptsCounts) {
-        this(acceptsCounts, null);
+        this(null, acceptsCounts);
     }
 
     @Override

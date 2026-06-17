@@ -1,6 +1,6 @@
 package io.github.bzethmayr.prismo;
 
-import io.github.bzethmayr.prismo.reals.FakeR;
+import io.github.bzethmayr.prismo.reals.FakeReals;
 import io.github.bzethmayr.prismo.model.FakeRStats;
 import io.github.bzethmayr.prismo.model.IterationStats;
 
@@ -31,7 +31,7 @@ public class Prismo {
     }
 
     public static void runPrismaticTest(
-            final FakeR real,
+            final FakeReals real,
             final Consumer<byte[]> random,
             final long iterations,
             final int sampleSize
@@ -88,7 +88,7 @@ public class Prismo {
      * @param analytics analytics hook.
      */
     public static void runPrismaticTest(
-            final FakeR real,
+            final FakeReals real,
             final Consumer<byte[]> random,
             final long iterations,
             final int sampleSize,

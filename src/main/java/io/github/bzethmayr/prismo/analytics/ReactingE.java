@@ -10,14 +10,14 @@ public final class ReactingE implements TaggedAnalyticElement {
     private final int delta;
     private final String tag;
 
-    public ReactingE(final AnalyticElement action, final int delta, final String tag) {
+    public ReactingE(final String tag, final AnalyticElement action, final int delta) {
         this.action = action;
         this.delta = delta;
         this.tag = tag;
     }
 
     public ReactingE(final AnalyticElement action, final int delta) {
-        this(action, delta, null);
+        this(null, action, delta);
     }
 
     @Override
