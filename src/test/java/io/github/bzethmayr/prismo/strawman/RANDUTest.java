@@ -5,7 +5,7 @@ import io.github.bzethmayr.prismo.analytics.CountE;
 import io.github.bzethmayr.prismo.analytics.EfficiencyE;
 import io.github.bzethmayr.prismo.analytics.PeriodicalE;
 import io.github.bzethmayr.prismo.model.IterationVariable;
-import io.github.bzethmayr.prismo.reals.FakeR;
+import io.github.bzethmayr.prismo.reals.FakeReals;
 import io.github.bzethmayr.prismo.reals.FanR;
 import io.github.bzethmayr.prismo.reals.RectR;
 import org.junit.jupiter.api.RepeatedTest;
@@ -24,16 +24,16 @@ class RANDUTest {
     @RepeatedTest(10)
     void randu_isTerrible() {
         final RANDU strawman = new RANDU(TEST_RANDOM.nextInt(1, Integer.MAX_VALUE));
-        final FakeR[] tests = {
+        final FakeReals[] tests = {
                 new RectR(128, 256, 2),
                 new RectR(256, 128, 2),
                 new RectR(512, 64, 2)
         };
-        final FakeR real = new FanR(tests);
+        final FakeReals real = new FanR(tests);
         final List<IterationVariable<Long>> survivorCounts = new LinkedList<>();
         final List<IterationVariable<Double>> efficiencies = new LinkedList<>();
-        final CountE counts = new CountE(survivorCounts::add, "left");
-        final EfficiencyE slopes = new EfficiencyE(efficiencies::add, "eff");
+        final CountE counts = new CountE("left", survivorCounts::add);
+        final EfficiencyE slopes = new EfficiencyE("eff", efficiencies::add);
         final long iterations = guessPrismaticIterations(32768, 30);
         final int period = (int) iterations / 32;
 
@@ -46,7 +46,7 @@ class RANDUTest {
                 new PeriodicalE(slopes, period, iterations, 2)
         ));
 
-        for (final FakeR lens : tests) {
+        for (final FakeReals lens : tests) {
             final long original = lens.originalCount();
             assertEquals(32768, original);
             final long survived = lens.survivorCount();

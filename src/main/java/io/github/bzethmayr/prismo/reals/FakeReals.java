@@ -2,16 +2,11 @@ package io.github.bzethmayr.prismo.reals;
 
 import io.github.bzethmayr.prismo.model.FakeRStats;
 
-import java.util.Iterator;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Function;
-import java.util.stream.Stream;
-
 /**
  * A fake real domain for prismatic (Pokemon-style) RNG testing.
  * Based loosely on the notion of the relative emptiness of countable vs uncountable sets.
  */
-public interface FakeR extends FakeRStats {
+public interface FakeReals extends FakeRStats {
     /**
      * Is this a surviving element?
      * @param putative some RNG output.

@@ -8,7 +8,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static net.zethmayr.fungu.core.ExceptionFactory.becauseIllegal;
 
-public final class RectR implements FakeR {
+public final class RectR implements TaggedFakeReals {
+    public static final int DEFAULT_SAMPLE_SIZE = 2;
+
+    private final String tag;
     private final int width;
     private final int height;
     private final long originalCount;
@@ -30,10 +33,19 @@ public final class RectR implements FakeR {
     }
 
     public RectR(int width, int height) {
-        this(width, height, 4);
+        this(null, width, height);
     }
 
     public RectR(int width, int height, int sampleSize) {
+        this(null, width, height, sampleSize);
+    }
+
+    public RectR(final String tag, int width, int height) {
+        this(tag, width, height, DEFAULT_SAMPLE_SIZE);
+    }
+
+    public RectR(final String tag, int width, int height, int sampleSize) {
+        this.tag = tag;
         if (width <= 0 || height <= 0) {
             throw new IllegalArgumentException("Positive dimensions required");
         }
@@ -47,6 +59,11 @@ public final class RectR implements FakeR {
         this.originalCount = (long) width * height;
         this.removed = new BitSet((int) originalCount);
         this.sampleSize = sampleSize;
+    }
+
+    @Override
+    public String tag() {
+        return tag;
     }
 
     @Override

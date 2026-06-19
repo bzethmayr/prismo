@@ -1,11 +1,15 @@
 package io.github.bzethmayr.prismo.reals;
 
+import io.github.bzethmayr.prismo.model.Resolving;
+
 import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.function.LongBinaryOperator;
 import java.util.stream.Stream;
 
-public record FanR(Reduction reduction, FakeR... basis) implements FakeR {
+import static io.github.bzethmayr.prismo.reals.FanR.Reduction.INTERSECTION;
+
+public record FanR(String tag, Reduction reduction, FakeReals... basis) implements TaggedFakeReals {
 
     public enum Reduction {
         INTERSECTION(Long::min),
@@ -22,18 +26,28 @@ public record FanR(Reduction reduction, FakeR... basis) implements FakeR {
         }
     }
 
+    public static Reduction resolvingReduction(Map<String, Object> params) {
+        return "UNION".equals(Resolving.paramString(params, "reduction"))
+                ? FanR.Reduction.UNION
+                : FanR.Reduction.INTERSECTION;
+    }
+
     public FanR {
         if (basis == null || basis.length == 0) {
             throw new IllegalArgumentException("Provide some basis");
         }
         final long originalCount = basis[0].originalCount();
-        if (Stream.of(basis).skip(1).map(FakeR::originalCount).anyMatch(n -> n != originalCount)) {
+        if (Stream.of(basis).skip(1).map(FakeReals::originalCount).anyMatch(n -> n != originalCount)) {
             throw new IllegalArgumentException("Basis must cover the same space");
         }
     }
 
-    public FanR(FakeR... basis) {
-        this(Reduction.INTERSECTION, basis);
+    public FanR(Reduction reduction, FakeReals... basis) {
+        this(null, reduction, basis);
+    }
+
+    public FanR(FakeReals... basis) {
+        this(INTERSECTION, basis);
     }
 
     @Override
@@ -57,7 +71,7 @@ public record FanR(Reduction reduction, FakeR... basis) implements FakeR {
 
     @Override
     public long survivorCount() {
-        return Stream.of(basis).mapToLong(FakeR::survivorCount)
+        return Stream.of(basis).mapToLong(FakeReals::survivorCount)
                 .reduce(reduction.reducer()).orElseThrow(IllegalStateException::new);
     }
 
@@ -102,7 +116,7 @@ public record FanR(Reduction reduction, FakeR... basis) implements FakeR {
 
     private Iterable<byte[]> unionSurvivors() {
         final Set<ByteBuffer> seen = new HashSet<>();
-        for (final FakeR f : basis) {
+        for (final FakeReals f : basis) {
             for (final byte[] arr : f.survivors()) {
                 seen.add(ByteBuffer.wrap(arr.clone()));
             }

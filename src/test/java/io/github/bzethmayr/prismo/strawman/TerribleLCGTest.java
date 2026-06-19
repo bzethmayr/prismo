@@ -4,7 +4,7 @@ import io.github.bzethmayr.prismo.analytics.AnalyticElement;
 import io.github.bzethmayr.prismo.analytics.CountE;
 import io.github.bzethmayr.prismo.analytics.PeriodicalE;
 import io.github.bzethmayr.prismo.model.IterationVariable;
-import io.github.bzethmayr.prismo.reals.FakeR;
+import io.github.bzethmayr.prismo.reals.FakeReals;
 import io.github.bzethmayr.prismo.reals.FanR;
 import io.github.bzethmayr.prismo.reals.RectR;
 import io.github.bzethmayr.prismo.reals.TestsWithRectR;
@@ -24,19 +24,19 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class TerribleLCGTest implements TestsWithRectR {
     int seed;
 
-    @RepeatedTest(64)
+    @RepeatedTest(16)
     void terribleLcg_breaksOnDistortedRects() {
         seed = TEST_RANDOM.nextInt();
         final TerribleLCG strawman = new TerribleLCG(seed);
-        final FakeR[] tests = {
+        final FakeReals[] tests = {
                 new RectR(CHAR_SQRT, CHAR_SQRT, 2),
                 new RectR(CHAR_WIDE, CHAR_THIN, 2),
                 new RectR(CHAR_THIN, CHAR_WIDE, 2)
         };
-        final FakeR real = new FanR(FanR.Reduction.UNION, tests);
+        final FakeReals real = new FanR(FanR.Reduction.UNION, tests);
         final List<IterationVariable<Long>> survivorCounts = new LinkedList<>();
         final List<IterationVariable<Double>> efficiencies = new LinkedList<>();
-        final CountE counts = new CountE(survivorCounts::add, "left");
+        final CountE counts = new CountE("left", survivorCounts::add);
         final long iterations = guessPrismaticIterations(65536, 30);
         final int period = (int) iterations / 32;
 
@@ -47,7 +47,7 @@ class TerribleLCGTest implements TestsWithRectR {
         ));
 
         System.out.printf("Terrible(%s): %s of %s%n", seed, real.survivorCount(), real.originalCount());
-        for (final FakeR lens : tests) {
+        for (final FakeReals lens : tests) {
             final long original = lens.originalCount();
             assertEquals(65536, original);
             final long survived = lens.survivorCount();

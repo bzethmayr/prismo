@@ -1,9 +1,15 @@
 package io.github.bzethmayr.prismo.reals;
 
-public record MismatchR(long originalCount, FakeR mismatched, double tolerance) implements FakeR {
+public record MismatchR(String tag, long originalCount, FakeReals mismatched, double tolerance) implements TaggedFakeReals {
 
-    public MismatchR(long originalCount, FakeR mismatched) {
-        this(originalCount, mismatched, 1.05d);
+    public static final double DEFAULT_TOLERANCE = 1.05d;
+
+    public MismatchR(long originalCount, FakeReals mismatched) {
+        this(null, originalCount, mismatched, DEFAULT_TOLERANCE);
+    }
+
+    public MismatchR(final long originalCount, final FakeReals mismatched, final double tolerance) {
+        this(null, originalCount, mismatched, tolerance);
     }
 
     public MismatchR {

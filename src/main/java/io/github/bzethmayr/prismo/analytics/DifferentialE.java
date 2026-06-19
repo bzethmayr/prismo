@@ -12,13 +12,13 @@ public class DifferentialE implements TaggedAnalyticElement {
 
     private final Consumer<IterationVariable<Double>> acceptsDifferential;
 
-    public DifferentialE(final Consumer<IterationVariable<Double>> acceptsDifferential, final String tag) {
+    public DifferentialE(final String tag, final Consumer<IterationVariable<Double>> acceptsDifferential) {
         this.acceptsDifferential = acceptsDifferential;
         this.tag = tag;
     }
 
     public DifferentialE(final Consumer<IterationVariable<Double>> acceptsDifferential) {
-        this(acceptsDifferential, null);
+        this(null, acceptsDifferential);
     }
 
     @Override

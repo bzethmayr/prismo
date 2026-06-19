@@ -9,7 +9,11 @@ import java.util.function.Function;
  * @param basis the fake real domain to pre-mix for.
  * @param mix   a bit-mixing function over equal-sized byte-arrays.
  */
-public record MixR(FakeR basis, Function<byte[], byte[]> mix) implements FakeR {
+public record MixR(String tag, FakeReals basis, Function<byte[], byte[]> mix) implements TaggedFakeReals {
+
+    public MixR(final FakeReals basis, final Function<byte[], byte[]> mix) {
+        this(null, basis, mix);
+    }
 
     @Override
     public long originalCount() {

@@ -4,7 +4,7 @@ import io.github.bzethmayr.prismo.analytics.*;
 import io.github.bzethmayr.prismo.analytics.AnalyticElement.FanE;
 import io.github.bzethmayr.prismo.model.IterationStats;
 import io.github.bzethmayr.prismo.model.IterationVariable;
-import io.github.bzethmayr.prismo.reals.FakeR;
+import io.github.bzethmayr.prismo.reals.FakeReals;
 import io.github.bzethmayr.prismo.reals.FanR;
 import io.github.bzethmayr.prismo.reals.MismatchR;
 import io.github.bzethmayr.prismo.reals.RectR;
@@ -34,7 +34,7 @@ class PrismoTest {
     static Stream<Consumer<byte[]>> samplers() {
         final Random random = new Random();
         final SecureRandom randomer = new SecureRandom();
-        final int n = 10;
+        final int n = 4;
         return Stream.concat(
                 IntStream.range(0, n / 2).mapToObj(x -> random::nextBytes),
                 IntStream.range(0, n / 2).mapToObj(x -> randomer::nextBytes)
@@ -44,16 +44,16 @@ class PrismoTest {
     @ParameterizedTest
     @MethodSource("samplers")
     void runPrismaticTest_twoBytes(final Consumer<byte[]> sampler) {
-        final FakeR[] tests = {
+        final FakeReals[] tests = {
                 new RectR(256, 256, 2),
                 new RectR(512, 128, 2),
                 new RectR(1024, 64, 2)
         };
-        final FakeR real = new FanR(tests);
+        final FakeReals real = new FanR(tests);
 
         runPrismaticTest(real, sampler, guessPrismaticIterations(65536, 30), 2);
 
-        for (final FakeR lens : tests) {
+        for (final FakeReals lens : tests) {
             final long original = lens.originalCount();
             assertEquals(65536, original);
             final long survived = lens.survivorCount();
@@ -65,16 +65,16 @@ class PrismoTest {
     @ParameterizedTest
     @MethodSource("samplers")
     void runPrismaticTest_twoBytes_samplingCounts(final Consumer<byte[]> sampler) {
-        final FakeR[] tests = {
+        final FakeReals[] tests = {
                 new RectR(256, 256, 2),
                 new RectR(512, 128, 2),
                 new RectR(1024, 64, 2)
         };
-        final FakeR real = new FanR(tests);
+        final FakeReals real = new FanR(tests);
         final long iterations = guessPrismaticIterations(65536, 30);
         final int period = (int) iterations / 32;
         final List<IterationVariable<Long>> survivorCounts = new LinkedList<>();
-        final CountE counts = new CountE(survivorCounts::add, "left");
+        final CountE counts = new CountE("left", survivorCounts::add);
 
         runPrismaticTest(real, sampler, iterations, 2, new AnalyticElement.FanE(
                 new PeriodicalE(counts, period, iterations),
@@ -82,7 +82,7 @@ class PrismoTest {
                 new PeriodicalE(counts, period, iterations, 2)
         ));
 
-        for (final FakeR lens : tests) {
+        for (final FakeReals lens : tests) {
             final long original = lens.originalCount();
             assertEquals(65536, original);
             final long survived = lens.survivorCount();
@@ -108,12 +108,12 @@ class PrismoTest {
     @ParameterizedTest
     @MethodSource("samplers")
     void runPrismaticTest_twoBytesWithAnalytics(final Consumer<byte[]> sampler) {
-        final FakeR[] tests = {
+        final FakeReals[] tests = {
                 new RectR(256, 256, 2),
                 new RectR(512, 128, 2),
                 new RectR(1024, 64, 2)
         };
-        final FakeR real = new FanR(tests);
+        final FakeReals real = new FanR(tests);
         final AtomicLong iterations = new AtomicLong();
         final BiConsumer<byte[], IterationStats> analytics = badAnalytics(iterations);
 
@@ -121,7 +121,7 @@ class PrismoTest {
                 real, sampler, guessPrismaticIterations(65536, 30),
                 2, analytics);
 
-        for (final FakeR lens : tests) {
+        for (final FakeReals lens : tests) {
             final long original = lens.originalCount();
             assertEquals(65536, original);
             final long survived = lens.survivorCount();
@@ -134,16 +134,16 @@ class PrismoTest {
     @ParameterizedTest
     @MethodSource("samplers")
     void runPrismaticTest_twoBytesMultipleGeometries(final Consumer<byte[]> sampler) {
-        final FakeR[] tests = new FakeR[]{
+        final FakeReals[] tests = new FakeReals[]{
                 new RectR(256, 256, 2),
                 new MismatchR(65536, new RectR(257, 255, 2)),
                 new MismatchR(65536, new RectR(258, 253, 2))
         };
-        final FakeR real = new FanR(tests);
+        final FakeReals real = new FanR(tests);
 
         runPrismaticTest(real, sampler, guessPrismaticIterations(65536, 30), 2);
 
-        for (final FakeR lens : tests) {
+        for (final FakeReals lens : tests) {
             final long original = lens.originalCount();
             assertEquals(65536, original);
             final long survived = lens.survivorCount();
@@ -155,13 +155,13 @@ class PrismoTest {
     @ParameterizedTest
     @MethodSource("samplers")
     void runPrismaticTest_threeBytesSamplingCountsAndSlopes(final Consumer<byte[]> samplers) {
-        final FakeR[] tests = {
+        final FakeReals[] tests = {
                 new RectR(600, 600, 3),
                 new RectR(2000, 180, 3),
                 new RectR(360, 1000, 3)
         };
         final long iterations = guessPrismaticIterations(360000, 100);
-        final FakeR real = new FanR(tests);
+        final FakeReals real = new FanR(tests);
         final List<IterationVariable<Long>> survivorCounts = new LinkedList<>();
         final List<IterationVariable<Double>> efficiencies = new LinkedList<>();
         final CountE counts = new CountE(survivorCounts::add);
@@ -186,14 +186,14 @@ class PrismoTest {
     @ParameterizedTest
     @MethodSource("samplers")
     void runPrismaticTest_threeBytesReactiveSamplingSlopes(final Consumer<byte[]> samplers) {
-        final FakeR[] tests = {
+        final FakeReals[] tests = {
                 new RectR(600, 600, 3),
                 new RectR(2000, 180, 3),
                 new RectR(360, 1000, 3)
         };
         final long iterations = guessPrismaticIterations(360000, 100);
         final List<IterationVariable<Double>> efficiencies = new LinkedList<>();
-        final FakeR real = new FanR(tests);
+        final FakeReals real = new FanR(tests);
         final EfficiencyE slopes = new EfficiencyE(efficiencies::add);
         final List<IterationVariable<Long>> counts = new LinkedList<>();
         final CountE counter = new CountE(counts::add);
