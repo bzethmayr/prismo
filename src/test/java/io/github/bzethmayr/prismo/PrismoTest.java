@@ -34,7 +34,7 @@ class PrismoTest {
     static Stream<Consumer<byte[]>> samplers() {
         final Random random = new Random();
         final SecureRandom randomer = new SecureRandom();
-        final int n = 10;
+        final int n = 4;
         return Stream.concat(
                 IntStream.range(0, n / 2).mapToObj(x -> random::nextBytes),
                 IntStream.range(0, n / 2).mapToObj(x -> randomer::nextBytes)

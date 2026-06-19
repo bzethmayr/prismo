@@ -124,7 +124,7 @@ class FakeRealsDefinitionTest {
         final FakeRealsDefinition def = new FakeRealsDefinition(
                 "nonexistent", null, null
         );
-        assertThrows(IllegalStateException.class, def::build);
+        assertThrows(IllegalArgumentException.class, def::build);
     }
 
     @Test

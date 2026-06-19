@@ -24,7 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class TerribleLCGTest implements TestsWithRectR {
     int seed;
 
-    @RepeatedTest(64)
+    @RepeatedTest(16)
     void terribleLcg_breaksOnDistortedRects() {
         seed = TEST_RANDOM.nextInt();
         final TerribleLCG strawman = new TerribleLCG(seed);

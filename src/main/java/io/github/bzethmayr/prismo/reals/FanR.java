@@ -1,5 +1,7 @@
 package io.github.bzethmayr.prismo.reals;
 
+import io.github.bzethmayr.prismo.model.Resolving;
+
 import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.function.LongBinaryOperator;
@@ -22,6 +24,12 @@ public record FanR(String tag, Reduction reduction, FakeReals... basis) implemen
         public LongBinaryOperator reducer() {
             return reducer;
         }
+    }
+
+    public static Reduction resolvingReduction(Map<String, Object> params) {
+        return "UNION".equals(Resolving.paramString(params, "reduction"))
+                ? FanR.Reduction.UNION
+                : FanR.Reduction.INTERSECTION;
     }
 
     public FanR {

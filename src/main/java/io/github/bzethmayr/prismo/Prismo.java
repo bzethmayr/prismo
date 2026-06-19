@@ -103,4 +103,16 @@ public class Prismo {
             analytics.accept(sample, stats);
         }
     }
+
+    public record SampleSetup(
+            FakeReals real,
+            Consumer<byte[]> random,
+            long iterations,
+            int sampleSize,
+            BiConsumer<byte[], IterationStats> analytics
+    ) {}
+
+    public static void runPrismaticTest(final SampleSetup s) {
+        runPrismaticTest(s.real, s.random, s.iterations, s.sampleSize, s.analytics);
+    }
 }

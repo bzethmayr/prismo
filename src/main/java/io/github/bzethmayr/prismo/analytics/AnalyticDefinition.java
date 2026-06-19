@@ -7,6 +7,8 @@ import io.github.bzethmayr.prismo.model.Tagged;
 import java.util.*;
 import java.util.function.Consumer;
 
+import static io.github.bzethmayr.prismo.model.Resolving.*;
+
 /**
  * Declarative description of an {@link AnalyticElement}.
  * <p>
@@ -32,38 +34,46 @@ public record AnalyticDefinition(String type, Map<String, Object> params, List<A
 
     private static final Map<String, ElementFactory> ELEMENT_REGISTRY = new HashMap<>();
 
+    private static TaggedAnalyticElement fan(
+            final List<AnalyticDefinition> children, final CollectorSource collectors, final String tag
+    ) {
+        return new AnalyticElement.FanE(tag, children.stream()
+                .map(d -> d.build(collectors))
+                .toArray(AnalyticElement[]::new));
+    }
+
     private static TaggedAnalyticElement sameOneOrFan(
             final List<AnalyticDefinition> children, final CollectorSource collectors, final String tag
     ) {
         if (children.size() == 1) {
             return children.getFirst().build(collectors);
         }
-        return new AnalyticElement.FanE(tag, children.stream()
-                .map(d -> d.build(collectors))
-                .toArray(AnalyticElement[]::new));
+        return fan(children, collectors, tag);
     }
 
     static {
+        final Resolving.GenericResolver<String> toParam = registeredParamString("to");
         // Primitive analytics – no children
         elementDefinition("count", element((children, params, collectors, tag) ->
-                new CountE(tag, collectors.longCollector(Resolving.paramString(params, "to")))));
+                new CountE(tag, collectors.longCollector(toParam.resolve(params)))));
         elementDefinition("efficiency", element((children, params, collectors, tag) ->
-                new EfficiencyE(tag, collectors.doubleCollector(Resolving.paramString(params, "to")))));
+                new EfficiencyE(tag, collectors.doubleCollector(toParam.resolve(params)))));
         elementDefinition("differential", element((children, params, collectors, tag) ->
-                new DifferentialE(tag, collectors.doubleCollector(Resolving.paramString(params, "to")))));
-
-        // Composite analytics – children are specified by name
+                new DifferentialE(tag, collectors.doubleCollector(toParam.resolve(params)))));
+        // Composite analytics – children are specified by nesting
+        final Resolving.IntResolver deltaParam = registeredParamInt("delta");
         elementDefinition("reacting", element((children, params, collectors, tag) ->
-                new ReactingE(tag, children.getFirst().build(collectors),
-                        Resolving.paramInt(params, "delta")))); // , List.of("action", "delta")
+                new ReactingE(tag, sameOneOrFan(children, collectors, tag), deltaParam.resolve(params))));
+        final Resolving.IntResolver periodParam = registeredParamInt("period");
+        final Resolving.LongResolver iterationsParam = registeredParamLong("iterations"); // should be inherited tho
+        final Resolving.LongResolver offsetParam = registeredParamLong("offset");
         elementDefinition("periodic", element((children, params, collectors, tag) ->
-                new PeriodicalE(tag, children.getFirst().build(collectors),
-                        Resolving.paramInt(params, "period"),
-                        Resolving.paramLong(params, "iterations"),
-                        Resolving.paramLong(params, "offset")
-                ))); // , List.of("action", "period", "iterations", "offset")
+                new PeriodicalE(tag, sameOneOrFan(children, collectors, tag),
+                        periodParam.resolve(params), iterationsParam.resolve(params), offsetParam.resolve(params)
+                )));
+        // Explicit composite - does not collapse when single-valued
         elementDefinition("fan", element((children, params, collectors, tag) ->
-                sameOneOrFan(children, collectors, tag))); //, List.of("elements")
+                fan(children, collectors, tag)));
     }
 
     static ElementFactory element(final ElementFactory elementFactory) {
@@ -115,5 +125,46 @@ public record AnalyticDefinition(String type, Map<String, Object> params, List<A
     @Override
     public List<AnalyticDefinition> children() {
         return Collections.unmodifiableList(children);
+    }
+
+    public static AnalyticBuilder builder() {
+        return new AnalyticBuilder();
+    }
+
+    public static class AnalyticBuilder {
+        private String tag;
+        private String type;
+        private final Map<String, Object> params = new HashMap<>();
+        private final List<AnalyticDefinition.AnalyticBuilder> children = new LinkedList<>();
+
+        public AnalyticBuilder tag(String tag) {
+            this.tag = tag;
+            return this;
+        }
+
+        public AnalyticBuilder type(String type) {
+            this.type = type;
+            return this;
+        }
+
+        public AnalyticBuilder param(final String name, final Object value) {
+            params.put(name, value);
+            return this;
+        }
+
+        public AnalyticBuilder child(AnalyticDefinition.AnalyticBuilder child) {
+            children.add(child);
+            return this;
+        }
+
+        public AnalyticBuilder inheritGlobals(final Map<String, Object> globals) {
+            globals.forEach((k, v) -> params.putIfAbsent(k, v));
+            children.forEach(c -> c.inheritGlobals(globals));
+            return this;
+        }
+
+        public AnalyticDefinition build() {
+            return new AnalyticDefinition(type, params, children.stream().map(AnalyticBuilder::build).toList(), tag);
+        }
     }
 }
