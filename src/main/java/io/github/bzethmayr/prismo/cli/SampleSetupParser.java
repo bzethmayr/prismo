@@ -30,6 +30,7 @@ public class SampleSetupParser {
         final Deque<FakeRealsBuilder> fakeRealsStack = new LinkedList<>();
         final Deque<AnalyticBuilder> analyticStack = new LinkedList<>();
         FanR.Reduction reduction;
+        String randomName;
         Consumer<byte[]> random;
         long explicitIterations;
         boolean explicitIterationsSet;
@@ -132,6 +133,7 @@ public class SampleSetupParser {
                     if (source == null) {
                         throw new IllegalArgumentException("Unknown source: " + name);
                     }
+                    parsing.randomName = name;
                     parsing.random = source;
                     break;
                 }
@@ -213,10 +215,10 @@ public class SampleSetupParser {
             throw new IllegalArgumentException("Sample size (-n) is required");
         }
 
-        lastLongCollectorResults = Collections.unmodifiableMap(new HashMap<>(parsing.longCollectorResults));
-        lastDoubleCollectorResults = Collections.unmodifiableMap(new HashMap<>(parsing.doubleCollectorResults));
+        lastLongCollectorResults = parsing.longCollectorResults;
+        lastDoubleCollectorResults = parsing.doubleCollectorResults;
 
-        return new SampleSetup(real, parsing.random, resolvedIterations, parsing.sampleSize, analytics);
+        return new SampleSetup(real, parsing.randomName, parsing.random, resolvedIterations, parsing.sampleSize, analytics, lastLongCollectorResults, lastDoubleCollectorResults);
     }
 
     private static boolean isFlag(final String arg) {

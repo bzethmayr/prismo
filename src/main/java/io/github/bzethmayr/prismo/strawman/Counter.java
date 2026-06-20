@@ -8,6 +8,7 @@ public class Counter implements ConcatenatesIntLcg {
 
     @Override
     public int nextInt() {
-        return counter.getAndIncrement();
+        final int count = counter.getAndIncrement();
+        return (count << 24) + count;
     }
 }

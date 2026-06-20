@@ -14,10 +14,10 @@ public interface ConcatenatesIntLcg extends Consumer<byte[]> {
 
             // spill bytes in a fixed order; no mixing
             // choose whatever endianness you like, just keep it consistent
-            if (i < len) buffer[i++] = (byte) (x);
-            if (i < len) buffer[i++] = (byte) (x >>> 8);
-            if (i < len) buffer[i++] = (byte) (x >>> 16);
             if (i < len) buffer[i++] = (byte) (x >>> 24);
+            if (i < len) buffer[i++] = (byte) (x >>> 16);
+            if (i < len) buffer[i++] = (byte) (x >>> 8);
+            if (i < len) buffer[i++] = (byte) (x);
         }
     }
 

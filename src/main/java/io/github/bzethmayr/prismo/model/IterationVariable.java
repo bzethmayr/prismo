@@ -17,5 +17,11 @@ public interface IterationVariable<T> extends Tagged {
     }
 
     record IterationValue<T>(long iteration, T value, String tag) implements IterationVariable<T> {
+        @Override
+        public String toString() {
+            return tag != null
+                    ? "%s@%s:%s".formatted(value, iteration, tag)
+                    : "%s@%s".formatted(value, iteration);
+        }
     }
 }
