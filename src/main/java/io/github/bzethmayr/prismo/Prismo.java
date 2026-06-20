@@ -1,9 +1,12 @@
 package io.github.bzethmayr.prismo;
 
+import io.github.bzethmayr.prismo.model.IterationVariable;
 import io.github.bzethmayr.prismo.reals.FakeReals;
 import io.github.bzethmayr.prismo.model.FakeRStats;
 import io.github.bzethmayr.prismo.model.IterationStats;
 
+import java.util.List;
+import java.util.Map;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
@@ -106,10 +109,13 @@ public class Prismo {
 
     public record SampleSetup(
             FakeReals real,
+            String randomName,
             Consumer<byte[]> random,
             long iterations,
             int sampleSize,
-            BiConsumer<byte[], IterationStats> analytics
+            BiConsumer<byte[], IterationStats> analytics,
+            Map<String, List<IterationVariable<Long>>> longs,
+            Map<String, List<IterationVariable<Double>>> doubles
     ) {}
 
     public static void runPrismaticTest(final SampleSetup s) {
